@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-docx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Convert documents (Word, Excel, Markdown, PDF) to/from each other. Includes an n8n community node and a reusable conversion library powered by LibreOffice headless.",
   "keywords": [
     "n8n-community-node-package",
@@ -13,13 +13,16 @@
     "libreoffice"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/zuse/n8n-nodes-docx",
+  "homepage": "https://github.com/SamsudeenAshad/DocX#readme",
   "author": {
-    "name": "DocX"
+    "name": "Samsudeen Ashad"
+  },
+  "bugs": {
+    "url": "https://github.com/SamsudeenAshad/DocX/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zuse/n8n-nodes-docx.git"
+    "url": "git+https://github.com/SamsudeenAshad/DocX.git"
   },
   "engines": {
     "node": ">=18.10"
