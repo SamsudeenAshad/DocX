@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-06-26
+
+### Fixed
+- Corrected `repository`, `homepage`, `bugs` and `author` metadata to point at
+  the real project (`github.com/SamsudeenAshad/DocX`).
+
 ## 0.1.0 — 2026-06-26
 
 Initial release.
