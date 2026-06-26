@@ -7,6 +7,9 @@ const turndown = new TurndownService({
   bulletListMarker: '-',
 });
 
+// Drop non-content elements so their text (e.g. inline CSS) never leaks into markdown.
+turndown.remove(['style', 'script', 'head', 'title', 'meta', 'link']);
+
 /** Render Markdown to a standalone HTML document. */
 export function markdownToHtml(md: string): string {
   const body = marked.parse(md, { async: false }) as string;

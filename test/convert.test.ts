@@ -11,7 +11,8 @@ test('markdown → html → markdown round-trips headings and lists', () => {
   assert.match(html, /<strong>bold<\/strong>/);
   const back = htmlToMarkdown(html);
   assert.match(back, /# Title/);
-  assert.match(back, /- a/);
+  assert.match(back, /-\s+a/);
+  assert.doesNotMatch(back, /font-family/); // inline CSS must not leak through
 });
 
 test('convert md → html (pure JS, no LibreOffice needed)', async () => {
