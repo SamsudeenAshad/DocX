@@ -1,0 +1,6 @@
+# Published package ships only the runtime build, not tests or sources.
+dist/test/
+**/*.test.js
+**/*.test.d.ts
+**/*.test.js.map
+*.tsbuildinfo
