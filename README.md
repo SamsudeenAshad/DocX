@@ -1,5 +1,10 @@
 # n8n-nodes-docx
 
+[![npm version](https://img.shields.io/npm/v/n8n-nodes-docx.svg)](https://www.npmjs.com/package/n8n-nodes-docx)
+[![npm downloads](https://img.shields.io/npm/dm/n8n-nodes-docx.svg)](https://www.npmjs.com/package/n8n-nodes-docx)
+[![n8n community node](https://img.shields.io/badge/n8n-community%20node-FF6D5A)](https://www.npmjs.com/package/n8n-nodes-docx)
+[![license](https://img.shields.io/npm/l/n8n-nodes-docx.svg)](./LICENSE)
+
 Convert documents between **Word (DOCX)**, **Excel (XLSX)**, **Markdown (MD)**, **PDF**, HTML, CSV and plain text — as an [n8n](https://n8n.io) community node, and as a reusable Node.js library.
 
 **100% pure JavaScript — no LibreOffice, no system binaries, no setup.** Works on any n8n instance (including managed/Docker hosts) the moment you install it.
@@ -27,18 +32,72 @@ Pure-JS conversion favours **content and structure** (text, headings, lists, tab
 
 That's it. All conversion libraries ship inside the package.
 
-## Install (n8n)
+## Use in n8n (community node)
 
-In n8n: **Settings → Community Nodes → Install**, enter `n8n-nodes-docx`.
+This package is published on npm as an [n8n community node](https://docs.n8n.io/integrations/community-nodes/):
 
-Or manually:
+> **[`n8n-nodes-docx`](https://www.npmjs.com/package/n8n-nodes-docx)** — `v0.2.0` · Public · built-in TypeScript declarations
+> `npm i n8n-nodes-docx`
+
+It adds a single node — **DocX Convert** — that converts a binary file from one document format to another. No LibreOffice or other system package is required; everything ships inside the node.
+
+### Install
+
+**Via the n8n UI (recommended):**
+
+1. Open **Settings → Community Nodes → Install**.
+2. Enter the npm package name `n8n-nodes-docx` and confirm.
+3. The **DocX Convert** node appears in the node panel (search "DocX").
+
+> Self-hosted only. The Community Nodes panel is available on self-hosted n8n; on n8n Cloud, community nodes must be enabled by the workspace.
+
+**Manually (self-hosted / Docker):**
 
 ```bash
-cd ~/.n8n/nodes        # or your N8N_CUSTOM_EXTENSIONS dir
+# inside your n8n data dir (mounts to /home/node/.n8n in Docker)
+cd ~/.n8n/nodes
 npm install n8n-nodes-docx
+# restart n8n
 ```
 
-Add a **DocX Convert** node, pick **Source Format** (or Auto-Detect) and **Target Format**, and point it at the binary property holding your file (default `data`).
+### The DocX Convert node
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| **Source Format** | Format of the incoming file, or **Auto-Detect** (uses filename + file signature). | Auto-Detect |
+| **Target Format** | Format to convert to: PDF, DOCX, XLSX, CSV, MD, HTML, TXT. | PDF |
+| **Input Binary Property** | Binary property on the item holding the source file. | `data` |
+| **Output Binary Property** | Binary property to write the converted file to. | `data` |
+| **Options → Output File Name** | Base name (no extension) for the result. Falls back to the input file name. | input name |
+
+**Output:** the converted file is attached as binary on the output property, and the item's JSON gains `fileName`, `mimeType`, `size`, `from`, and `to`. Enable **Continue On Fail** to route conversion errors as data instead of stopping the workflow.
+
+### Example workflows
+
+**1. Convert an uploaded Word doc to PDF**
+
+```
+Webhook (file upload)
+  └─ DocX Convert   (Source: Auto-Detect, Target: PDF)
+       └─ Respond to Webhook / Write Binary File
+```
+
+**2. Pull an Excel attachment from email and turn it into Markdown for an LLM**
+
+```
+Email Trigger (IMAP)        → binary `attachment_0`
+  └─ DocX Convert            (Source: Excel, Target: Markdown,
+                              Input Binary Property: attachment_0)
+       └─ AI Agent / Set     (use the markdown table downstream)
+```
+
+**3. Batch: convert every Markdown file in a folder to DOCX**
+
+```
+Read/List Files (Binary)
+  └─ DocX Convert   (Source: Markdown, Target: Word (DOCX))
+       └─ Write Binary File
+```
 
 ## Use as a library
 
