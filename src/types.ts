@@ -8,10 +8,6 @@ export interface ConvertOptions {
   to: Format;
   /** Original filename — used for format auto-detection when `from` is absent. */
   filename?: string;
-  /** Override the LibreOffice binary path (otherwise auto-resolved / $SOFFICE_PATH). */
-  sofficePath?: string;
-  /** Max time a single conversion may run, ms. Default 120_000. */
-  timeoutMs?: number;
 }
 
 export interface ConvertResult {

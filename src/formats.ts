@@ -59,15 +59,3 @@ export function detectFormat(
 ): Format | undefined {
   return explicit ?? formatFromFilename(filename) ?? formatFromMagic(buf);
 }
-
-/** LibreOffice filter map: target format -> soffice --convert-to argument. */
-export const LO_FILTER: Partial<Record<Format, string>> = {
-  pdf: 'pdf',
-  docx: 'docx:MS Word 2007 XML',
-  xlsx: 'xlsx:Calc MS Excel 2007 XML',
-  html: 'html',
-  txt: 'txt:Text',
-  csv: 'csv',
-  odt: 'odt',
-  ods: 'ods',
-};

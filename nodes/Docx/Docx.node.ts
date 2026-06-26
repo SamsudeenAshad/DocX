@@ -89,20 +89,6 @@ export class Docx implements INodeType {
             placeholder: 'converted',
             description: 'Base name (without extension) for the output file. Defaults to the input file name.',
           },
-          {
-            displayName: 'LibreOffice Path',
-            name: 'sofficePath',
-            type: 'string',
-            default: '',
-            description: 'Override path to the soffice binary. Falls back to $SOFFICE_PATH or auto-detection.',
-          },
-          {
-            displayName: 'Timeout (Ms)',
-            name: 'timeoutMs',
-            type: 'number',
-            default: 120000,
-            description: 'Maximum time a single conversion may run',
-          },
         ],
       },
     ],
@@ -120,8 +106,6 @@ export class Docx implements INodeType {
         const outputProperty = this.getNodeParameter('outputProperty', i) as string;
         const options = this.getNodeParameter('options', i, {}) as {
           fileName?: string;
-          sofficePath?: string;
-          timeoutMs?: number;
         };
 
         const binary = items[i].binary?.[inputProperty];
@@ -139,8 +123,6 @@ export class Docx implements INodeType {
           from: fromParam === 'auto' ? undefined : (fromParam as Format),
           to,
           filename: binary.fileName,
-          sofficePath: options.sofficePath || undefined,
-          timeoutMs: options.timeoutMs,
         });
 
         const baseName =
