@@ -144,7 +144,17 @@ function textContent(node: Node | string): string {
   return node.children.map(textContent).join('');
 }
 
+/** Strip elements whose text content must never become document content. */
+function stripNonContent(html: string): string {
+  return html
+    .replace(/<!doctype[^>]*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '');
+}
+
 /** Public entry: HTML string → block list. */
 export function htmlToBlocks(html: string): Block[] {
-  return blocksFrom(parse(html));
+  return blocksFrom(parse(stripNonContent(html)));
 }

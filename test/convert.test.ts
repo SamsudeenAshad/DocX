@@ -51,6 +51,15 @@ test('xlsx → pdf produces a real PDF', async () => {
   assert.equal(pdf.data.subarray(0, 4).toString('latin1'), '%PDF');
 });
 
+test('md → pdf → txt extracts the real content (no HTML/CSS leak)', async () => {
+  const pdf = await convert('# Report\n\nHello world from DocX.', { from: 'md', to: 'pdf' });
+  const txt = await convert(pdf.data, { from: 'pdf', to: 'txt' });
+  const out = txt.data.toString();
+  assert.match(out, /Report/);
+  assert.match(out, /Hello world from DocX/);
+  assert.doesNotMatch(out, /DOCTYPE|font-family|<html>/i);
+});
+
 test('detectFormat: PDF magic + filename fallback', () => {
   assert.equal(detectFormat(Buffer.from('%PDF-1.7')), 'pdf');
   assert.equal(detectFormat(Buffer.from('x'), undefined, 'r.xlsx'), 'xlsx');

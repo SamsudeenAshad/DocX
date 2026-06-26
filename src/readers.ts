@@ -27,17 +27,18 @@ export async function spreadsheetToSheets(
 
 /** PDF → plain text (text layer only; scanned/image PDFs yield little or nothing). */
 export async function pdfToText(buf: Buffer): Promise<string> {
-  // pdf-parse exports a function; default-interop for CJS.
-  const mod: any = await import('pdf-parse');
-  const pdfParse = mod.default ?? mod;
+  const { PDFParse } = (await import('pdf-parse')) as any;
+  const parser = new PDFParse({ data: new Uint8Array(buf) });
   try {
-    const data = await pdfParse(buf);
-    return (data.text ?? '').trim();
+    const res = await parser.getText();
+    return (res?.text ?? '').trim();
   } catch (err) {
     throw new ConversionError(
       'Failed to read PDF. It may be encrypted or contain no extractable text layer (scanned image).',
       err,
     );
+  } finally {
+    await parser.destroy?.().catch?.(() => undefined);
   }
 }
 

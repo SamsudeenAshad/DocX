@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-docx",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Convert documents (Word, Excel, Markdown, PDF) to/from each other. Includes an n8n community node and a reusable conversion library powered by LibreOffice headless.",
   "keywords": [
     "n8n-community-node-package",
@@ -54,7 +54,7 @@
     "mammoth": "^1.12.0",
     "marked": "^12.0.2",
     "pdf-parse": "^2.4.5",
-    "pdfmake": "^0.3.11",
+    "pdfkit": "^0.15.2",
     "turndown": "^7.1.3",
     "xlsx": "^0.18.5"
   },
@@ -62,7 +62,6 @@
     "@types/html-to-text": "^9.0.4",
     "@types/node": "^20.11.30",
     "@types/pdfkit": "^0.17.6",
-    "@types/pdfmake": "^0.3.3",
     "@types/turndown": "^5.0.4",
     "n8n-workflow": "^1.40.0",
     "typescript": "^5.4.5"

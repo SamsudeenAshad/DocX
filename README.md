@@ -1,30 +1,31 @@
 # n8n-nodes-docx
 
-Convert documents between **Word (DOCX)**, **Excel (XLSX)**, **Markdown (MD)**, **PDF**, HTML and plain text — as an [n8n](https://n8n.io) community node, and as a reusable Node.js library.
+Convert documents between **Word (DOCX)**, **Excel (XLSX)**, **Markdown (MD)**, **PDF**, HTML, CSV and plain text — as an [n8n](https://n8n.io) community node, and as a reusable Node.js library.
 
-High-fidelity Office ↔ PDF conversion is powered by **LibreOffice headless**; Markdown is handled in pure JS.
+**100% pure JavaScript — no LibreOffice, no system binaries, no setup.** Works on any n8n instance (including managed/Docker hosts) the moment you install it.
 
 ## Conversion matrix
 
-| From \ To | PDF | DOCX | XLSX | MD  | HTML | TXT |
-|-----------|:---:|:----:|:----:|:---:|:----:|:---:|
-| **DOCX**  | ✅  |  —   |  —   | ✅  | ✅   | ✅  |
-| **XLSX**  | ✅  |  —   |  —   | ✅  | ✅   | ✅  |
-| **MD**    | ✅  | ✅   |  —   |  —  | ✅   | —   |
-| **PDF**   |  —  | ✅   | ✅   | ⚠️  | ⚠️   | ✅  |
-| **HTML**  | ✅  | ✅   |  —   | ✅  |  —   | ✅  |
+| From \ To | PDF | DOCX | XLSX | CSV | MD  | HTML | TXT |
+|-----------|:---:|:----:|:----:|:---:|:---:|:----:|:---:|
+| **DOCX**  | ✅  |  —   |  —   |  —  | ✅  | ✅   | ✅  |
+| **XLSX**  | ✅  |  —   | ✅   | ✅  | ✅  | ✅   | ✅  |
+| **CSV**   | ✅  |  —   | ✅   |  —  | ✅  | ✅   | ✅  |
+| **MD**    | ✅  | ✅   |  —   |  —  |  —  | ✅   | ✅  |
+| **HTML**  | ✅  | ✅   |  —   |  —  | ✅  |  —   | ✅  |
+| **PDF**   |  —  | ⚠️   | ⚠️   | ⚠️  | ⚠️  | ⚠️   | ✅  |
 
-✅ supported · ⚠️ best-effort (depends on the PDF's text layer) · — not meaningful
+✅ supported · ⚠️ best-effort (text-layer extraction; layout/images not preserved) · — not meaningful
+
+### Fidelity notes
+
+Pure-JS conversion favours **content and structure** (text, headings, lists, tables, bold/italic) over pixel-perfect layout. Complex page layouts, embedded fonts and images are simplified. For most Word/Excel/Markdown/PDF automation this is exactly what you want; if you need print-perfect fidelity, a LibreOffice-backed service is the alternative.
 
 ## Requirements
 
 - **Node.js ≥ 18.10**
-- **LibreOffice** for any conversion involving DOCX / XLSX / PDF.
-  - macOS: `brew install --cask libreoffice`
-  - Debian/Ubuntu: `sudo apt-get install -y libreoffice`
-  - Docker n8n: install LibreOffice in your image, or set `SOFFICE_PATH`.
 
-The binary is auto-detected. Override with the `SOFFICE_PATH` env var or the node's **LibreOffice Path** option. Markdown↔HTML works without LibreOffice.
+That's it. All conversion libraries ship inside the package.
 
 ## Install (n8n)
 
@@ -60,11 +61,9 @@ await convert(buf, { to: 'md', filename: 'sheet.xlsx' });
 
 ```ts
 convert(input: Buffer | string, opts: {
-  from?: 'docx'|'xlsx'|'md'|'pdf'|'html'|'txt'|'csv'|'odt'|'ods'; // auto-detected if omitted
-  to:    'docx'|'xlsx'|'md'|'pdf'|'html'|'txt'|'csv'|'odt'|'ods';
+  from?: 'docx'|'xlsx'|'md'|'pdf'|'html'|'txt'|'csv'; // auto-detected if omitted
+  to:    'docx'|'xlsx'|'md'|'pdf'|'html'|'txt'|'csv';
   filename?: string;     // helps auto-detection
-  sofficePath?: string;  // override LibreOffice binary
-  timeoutMs?: number;    // default 120000
 }): Promise<{ data: Buffer; mime: string; ext: Format }>
 ```
 
@@ -73,7 +72,7 @@ convert(input: Buffer | string, opts: {
 ```bash
 npm install
 npm run build      # tsc → dist/
-npm test           # node --test (JS-only paths; no LibreOffice required)
+npm test           # node --test (real conversions, no system deps)
 npm run dev        # tsc --watch
 ```
 
@@ -82,12 +81,16 @@ Project layout:
 ```
 src/                 reusable conversion library
   convert.ts         routing / orchestration
-  libreoffice.ts     soffice headless wrapper
-  markdown.ts        md ↔ html
-  formats.ts         detection + MIME + LO filters
+  readers.ts         docx/xlsx/pdf/html → normalized form
+  writers.ts         → pdf (pdfkit), docx, xlsx, csv, md, html
+  html-model.ts      HTML → structured blocks (shared by pdf/docx writers)
+  markdown.ts        md ↔ html (marked / turndown)
+  formats.ts         format detection + MIME
 nodes/Docx/          n8n community node + icon
-test/                smoke tests
+test/                conversion tests
 ```
+
+Powered by: `pdfkit`, `docx`, `xlsx` (SheetJS), `mammoth`, `pdf-parse`, `marked`, `turndown`, `html-to-text` — all pure JS.
 
 ## License
 
