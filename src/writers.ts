@@ -1,83 +1,132 @@
+import PDFDocument from 'pdfkit';
 import { Block, Inline, htmlToBlocks } from './html-model';
 import { ConversionError } from './types';
 
 const HEADING_PT = [22, 18, 15, 13, 12, 11];
+const BODY_PT = 11;
+const PAGE_MARGIN = 50;
 
 // ---------------------------------------------------------------------------
-// PDF (pdfmake) — pure JS, embeds its own fonts, no browser/soffice needed.
+// PDF (pdfkit) — pure JS, uses PDF's built-in standard fonts, no browser/soffice.
 // ---------------------------------------------------------------------------
 
-function inlinesToPdf(inlines: Inline[]): any[] {
-  return inlines.map((i) => ({
-    text: i.text,
-    bold: i.bold || undefined,
-    italics: i.italic || undefined,
-    ...(i.code ? { font: 'Courier' } : {}),
-  }));
+function fontFor(i: Inline, mono = false): string {
+  if (mono || i.code) {
+    return i.bold ? 'Courier-Bold' : i.italic ? 'Courier-Oblique' : 'Courier';
+  }
+  if (i.bold && i.italic) return 'Helvetica-BoldOblique';
+  if (i.bold) return 'Helvetica-Bold';
+  if (i.italic) return 'Helvetica-Oblique';
+  return 'Helvetica';
 }
 
-function blocksToPdfContent(blocks: Block[]): any[] {
-  const content: any[] = [];
-  for (const b of blocks) {
+/** Write a run of inline fragments as a single flowing paragraph. */
+function writeInlines(doc: any, inlines: Inline[], size: number) {
+  if (!inlines.length) {
+    doc.font('Helvetica').fontSize(size).text(' ');
+    return;
+  }
+  inlines.forEach((frag, idx) => {
+    doc.font(fontFor(frag)).fontSize(size);
+    doc.text(frag.text, { continued: idx < inlines.length - 1 });
+  });
+}
+
+function renderBlocks(doc: any, blocks: Block[]) {
+  blocks.forEach((b) => {
     switch (b.type) {
       case 'heading':
-        content.push({
-          text: inlinesToPdf(b.inlines),
-          fontSize: HEADING_PT[b.level - 1] ?? 11,
-          bold: true,
-          margin: [0, 8, 0, 4],
-        });
+        doc.moveDown(0.4);
+        doc.font('Helvetica-Bold').fontSize(HEADING_PT[b.level - 1] ?? BODY_PT);
+        doc.text(b.inlines.map((i) => i.text).join(''));
+        doc.moveDown(0.3);
         break;
       case 'paragraph':
-        content.push({ text: inlinesToPdf(b.inlines), margin: [0, 0, 0, 6] });
+        writeInlines(doc, b.inlines, BODY_PT);
+        doc.moveDown(0.5);
         break;
       case 'list':
-        content.push({
-          [b.ordered ? 'ol' : 'ul']: b.items.map((it) => ({ text: inlinesToPdf(it) })),
-          margin: [0, 0, 0, 6],
+        b.items.forEach((it, n) => {
+          const bullet = b.ordered ? `${n + 1}. ` : '•  ';
+          doc.font('Helvetica').fontSize(BODY_PT);
+          doc.text(bullet, { continued: true });
+          writeInlines(doc, it, BODY_PT);
         });
+        doc.moveDown(0.5);
         break;
       case 'code':
-        content.push({
-          text: b.text,
-          font: 'Courier',
-          fontSize: 9,
-          fillColor: '#f4f4f4',
-          margin: [0, 0, 0, 6],
-        });
+        doc.font('Courier').fontSize(9).fillColor('#333333');
+        doc.text(b.text, { lineGap: 1 });
+        doc.fillColor('#000000');
+        doc.moveDown(0.5);
         break;
       case 'quote':
-        content.push({
-          text: inlinesToPdf(b.inlines),
-          italics: true,
-          color: '#555555',
-          margin: [12, 0, 0, 6],
-        });
+        doc.font('Helvetica-Oblique').fontSize(BODY_PT).fillColor('#555555');
+        doc.text(b.inlines.map((i) => i.text).join(''), { indent: 18 });
+        doc.fillColor('#000000');
+        doc.moveDown(0.5);
         break;
       case 'hr':
-        content.push({
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: '#cccccc' }],
-          margin: [0, 4, 0, 8],
-        });
+        doc.moveDown(0.3);
+        doc
+          .moveTo(doc.page.margins.left, doc.y)
+          .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+          .strokeColor('#cccccc')
+          .stroke();
+        doc.moveDown(0.5);
         break;
-      case 'table': {
-        if (!b.rows.length) break;
-        const width = Math.max(...b.rows.map((r) => r.length));
-        const body = b.rows.map((r) => {
-          const cells = r.map((c) => ({ text: inlinesToPdf(c) }));
-          while (cells.length < width) cells.push({ text: [] });
-          return cells;
-        });
-        content.push({
-          table: { headerRows: 1, widths: Array(width).fill('*'), body },
-          layout: 'lightHorizontalLines',
-          margin: [0, 0, 0, 8],
-        });
+      case 'table':
+        renderTable(doc, b.rows);
+        doc.moveDown(0.5);
         break;
-      }
     }
-  }
-  return content.length ? content : [{ text: '' }];
+  });
+}
+
+/** Simple fixed-grid table: equal column widths, header row in bold. */
+function renderTable(doc: any, rows: Inline[][][]) {
+  if (!rows.length) return;
+  const cols = Math.max(...rows.map((r) => r.length));
+  const left = doc.page.margins.left;
+  const usable = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const colW = usable / cols;
+  const pad = 4;
+
+  rows.forEach((row, ri) => {
+    const cellTexts = Array.from({ length: cols }, (_, ci) =>
+      (row[ci] ?? []).map((i) => i.text).join(''),
+    );
+    doc.font(ri === 0 ? 'Helvetica-Bold' : 'Helvetica').fontSize(10);
+    const heights = cellTexts.map((t) => doc.heightOfString(t || ' ', { width: colW - pad * 2 }));
+    const rowH = Math.max(...heights) + pad * 2;
+
+    if (doc.y + rowH > doc.page.height - doc.page.margins.bottom) doc.addPage();
+    const y = doc.y;
+
+    cellTexts.forEach((t, ci) => {
+      const x = left + ci * colW;
+      doc.rect(x, y, colW, rowH).strokeColor('#999999').lineWidth(0.5).stroke();
+      doc.fillColor('#000000').text(t, x + pad, y + pad, { width: colW - pad * 2 });
+    });
+    doc.y = y + rowH;
+  });
+}
+
+function blocksToPdf(blocks: Block[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4' });
+      const chunks: Buffer[] = [];
+      doc.on('data', (c: Buffer) => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+      doc.font('Helvetica').fontSize(BODY_PT);
+      renderBlocks(doc, blocks.length ? blocks : [{ type: 'paragraph', inlines: [{ text: '' }] }]);
+      doc.end();
+    } catch (err) {
+      reject(new ConversionError('PDF generation failed', err));
+    }
+  });
 }
 
 export async function htmlToPdf(html: string): Promise<Buffer> {
@@ -96,48 +145,6 @@ export async function rowsToPdf(sheets: { name: string; rows: string[][] }[]): P
   }
   return blocksToPdf(blocks);
 }
-
-function blocksToPdf(blocks: Block[]): Promise<Buffer> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // The Node server-side printer lives at pdfmake/src/printer; the package
-      // root + @types/pdfmake describe the browser client which has no constructor
-      // and ships no types for this subpath. Load it via runtime require to bypass
-      // TS module resolution.
-      const req = eval('require') as NodeRequire;
-      const PdfPrinter: any = req('pdfmake/src/printer');
-      const printer = new PdfPrinter(STANDARD_FONTS);
-      const doc = printer.createPdfKitDocument({
-        content: blocksToPdfContent(blocks),
-        defaultStyle: { font: 'Helvetica', fontSize: 11, lineHeight: 1.3 },
-        pageMargins: [40, 40, 40, 40],
-      });
-      const chunks: Buffer[] = [];
-      doc.on('data', (c: Buffer) => chunks.push(c));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-      doc.end();
-    } catch (err) {
-      reject(new ConversionError('PDF generation failed', err));
-    }
-  });
-}
-
-// pdfmake needs font descriptors; PDF's 14 standard fonts need no embedding.
-const STANDARD_FONTS = {
-  Helvetica: {
-    normal: 'Helvetica',
-    bold: 'Helvetica-Bold',
-    italics: 'Helvetica-Oblique',
-    bolditalics: 'Helvetica-BoldOblique',
-  },
-  Courier: {
-    normal: 'Courier',
-    bold: 'Courier-Bold',
-    italics: 'Courier-Oblique',
-    bolditalics: 'Courier-BoldOblique',
-  },
-};
 
 // ---------------------------------------------------------------------------
 // DOCX (docx lib)

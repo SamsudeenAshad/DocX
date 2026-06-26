@@ -61,6 +61,7 @@
   "devDependencies": {
     "@types/html-to-text": "^9.0.4",
     "@types/node": "^20.11.30",
+    "@types/pdfkit": "^0.17.6",
     "@types/pdfmake": "^0.3.3",
     "@types/turndown": "^5.0.4",
     "n8n-workflow": "^1.40.0",
